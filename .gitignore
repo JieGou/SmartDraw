@@ -33,3 +33,9 @@
 *.exe
 *.out
 *.app
+.vs
+obj
+Backup
+/SmartDraw.Framework/UpgradeLog.htm
+*.user
+*.user

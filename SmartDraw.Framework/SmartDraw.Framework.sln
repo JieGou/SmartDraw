@@ -1,6 +1,8 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.32126.315
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartDraw.Framework", "SmartDraw.Framework\SmartDraw.Framework.csproj", "{DD551DEE-0718-4E27-BFD3-47AADBB10EAE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExtractDatabase", "ExtractDatabase\ExtractDatabase\ExtractDatabase.csproj", "{74D02945-263B-452E-A6F8-0C83E61A3ED6}"
@@ -32,5 +34,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2331877F-FB7A-4159-9E15-D9D1F100A415}
 	EndGlobalSection
 EndGlobal
