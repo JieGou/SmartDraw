@@ -56,159 +56,146 @@ namespace aDwgWriter
         [CommandMethod("MNL")]
         static public void MyNetLoad()
         {
-          Document doc =
-            Application.DocumentManager.MdiActiveDocument;
-          Editor ed = doc.Editor;
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Editor ed = doc.Editor;
 
-          PromptStringOptions pso =
-            new PromptStringOptions(
-              "\nEnter the path of the module to load: "
-            );
-          pso.AllowSpaces = true;
+            PromptStringOptions pso = new PromptStringOptions("\nEnter the path of the module to load: ")
+            {
+                AllowSpaces = true
+            };
 
-          PromptResult pr = ed.GetString(pso);
-          if (pr.Status != PromptStatus.OK)
-            return;
+            PromptResult pr = ed.GetString(pso);
+            if (pr.Status != PromptStatus.OK) return;
 
-          try
-          {
-            Assembly.LoadFrom(pr.StringResult);
-          }
-          catch(System.Exception ex)
-          {
-            ed.WriteMessage(
-              "\nCannot load {0}: {1}",
-              pr.StringResult,
-              ex.Message
-            );
-          }
+            try
+            {
+                Assembly.LoadFrom(pr.StringResult);
+            }
+            catch (System.Exception ex)
+            {
+                ed.WriteMessage("\nCannot load {0}: {1}", pr.StringResult, ex.Message);
+            }
         }
 
-		[CommandMethod("DwgWriter")]
-		public static void CommandDwgWriter()
-		{
-			PromptStringOptions opts = new PromptStringOptions("\nEnter File Path:");
-			PromptResult res = Application.DocumentManager.MdiActiveDocument.Editor.GetString(opts);
-			if (PromptStatus.OK == res.Status)
-			{
-				int iFileCount = 0;
-				{
-					using (StreamReader sr = new StreamReader(res.StringResult))
-					{
-						while (!sr.EndOfStream)
-						{
-							string aLine = sr.ReadLine();
-							if (0 == aLine.IndexOf("NEWFILE")) iFileCount++;
-						}
-					}
-				}
+        [CommandMethod("DwgWriter")]
+        public static void CommandDwgWriter()
+        {
+            PromptStringOptions opts = new PromptStringOptions("\nEnter File Path:");
+            PromptResult res = Application.DocumentManager.MdiActiveDocument.Editor.GetString(opts);
+            if (PromptStatus.OK == res.Status)
+            {
+                int iFileCount = 0;
+                {
+                    using (StreamReader sr = new StreamReader(res.StringResult))
+                    {
+                        while (!sr.EndOfStream)
+                        {
+                            string aLine = sr.ReadLine();
+                            if (0 == aLine.IndexOf("NEWFILE")) iFileCount++;
+                        }
+                    }
+                }
 
-				Application.ShowModelessDialog(Application.MainWindow.Handle, (System.Windows.Forms.Form)ProgressLogDlg.Instance, false);
-				//ProgressLogDlg.Instance.listViewLog.Items.Clear();
-				ProgressLogDlg.Instance.buttonClose.Enabled = false;
+                Application.ShowModelessDialog(Application.MainWindow.Handle, (System.Windows.Forms.Form)ProgressLogDlg.Instance, false);
+                //ProgressLogDlg.Instance.listViewLog.Items.Clear();
+                ProgressLogDlg.Instance.buttonClose.Enabled = false;
 
-				ProgressLogDlg.Instance.progressBarStatus.Maximum = iFileCount;
-				ProgressLogDlg.Instance.progressBarStatus.Minimum = 0;
-				ProgressLogDlg.Instance.progressBarStatus.Step = 1;
-				using (StreamReader sr = new StreamReader(res.StringResult))
-				{
-					string sFilePath = string.Empty;
-					while (!sr.EndOfStream)
-					{
-						string aLine = sr.ReadLine();
-						if (0 == aLine.IndexOf("NEWFILE"))
-						{
-							sFilePath = aLine.Substring("NEWFILE ".Length);
-							if (File.Exists(sFilePath))
-							{
-								Database oldDb = HostApplicationServices.WorkingDatabase;
+                ProgressLogDlg.Instance.progressBarStatus.Maximum = iFileCount;
+                ProgressLogDlg.Instance.progressBarStatus.Minimum = 0;
+                ProgressLogDlg.Instance.progressBarStatus.Step = 1;
+                using (StreamReader sr = new StreamReader(res.StringResult))
+                {
+                    string sFilePath = string.Empty;
+                    while (!sr.EndOfStream)
+                    {
+                        string aLine = sr.ReadLine();
+                        if (0 != aLine.IndexOf("NEWFILE")) continue;
+                        sFilePath = aLine.Substring("NEWFILE ".Length);
+                        if (!File.Exists(sFilePath)) continue;
+                        Database oldDb = HostApplicationServices.WorkingDatabase;
 
-								string tmp = Path.Combine(Path.GetTempPath(), Path.GetFileName(sFilePath));
-								File.Copy(sFilePath, tmp, true);
-								using (Database database = new Database(false, true))
-								{
-									ProgressLogDlg.Instance.textBoxFileName.Text = Path.GetFileName(sFilePath);
-									database.ReadDwgFile(sFilePath, FileOpenMode.OpenForReadAndWriteNoShare, false, string.Empty);
-									database.CloseInput(true);
-									HostApplicationServices.WorkingDatabase = database;
+                        string tmp = Path.Combine(Path.GetTempPath(), Path.GetFileName(sFilePath));
+                        File.Copy(sFilePath, tmp, true);
+                        using (Database database = new Database(false, true))
+                        {
+                            ProgressLogDlg.Instance.textBoxFileName.Text = Path.GetFileName(sFilePath);
+                            database.ReadDwgFile(sFilePath, FileOpenMode.OpenForReadAndWriteNoShare, false, string.Empty);
+                            database.CloseInput(true);
+                            HostApplicationServices.WorkingDatabase = database;
 
-									while (!sr.EndOfStream)
-									{
-										aLine = sr.ReadLine();
-										if (0 == aLine.IndexOf("SAVE DESIGN"))
-										{
-											HostApplicationServices.WorkingDatabase = oldDb;
-											database.SaveAs(sFilePath, DwgVersion.Current);
+                            while (!sr.EndOfStream)
+                            {
+                                aLine = sr.ReadLine();
+                                if (0 == aLine.IndexOf("SAVE DESIGN"))
+                                {
+                                    HostApplicationServices.WorkingDatabase = oldDb;
+                                    database.SaveAs(sFilePath, DwgVersion.Current);
 
-											ProgressLogDlg.Instance.progressBarStatus.PerformStep();
-											System.Windows.Forms.Application.DoEvents();
-											break;
-										}
-										if (File.Exists(aLine)) Draw(database, aLine);
-									}
-								}
-							}
-						}
-					}
-				}
-				ProgressLogDlg.Instance.buttonClose.Enabled = true;
-			}
-		}
+                                    ProgressLogDlg.Instance.progressBarStatus.PerformStep();
+                                    System.Windows.Forms.Application.DoEvents();
+                                    break;
+                                }
+                                if (File.Exists(aLine)) Draw(database, aLine);
+                            }
+                        }
+                    }
+                }
+                ProgressLogDlg.Instance.buttonClose.Enabled = true;
+            }
+        }
 
-		private static void Draw(Database database , string sFilePath)
-		{
-			using (StreamReader sr = new StreamReader(sFilePath))
-			{
-				while (!sr.EndOfStream)
-				{
-					WriteElm oWriteElm = null;
+        private static void Draw(Database database, string sFilePath)
+        {
+            using (StreamReader sr = new StreamReader(sFilePath))
+            {
+                while (!sr.EndOfStream)
+                {
+                    WriteElm oWriteElm = null;
 
-					string aLine = sr.ReadLine();
-					oWriteElm = ElmFactory.CreateElm(aLine);
+                    string aLine = sr.ReadLine();
+                    oWriteElm = ElmFactory.CreateElm(aLine);
 
-					if (oWriteElm == null) continue;
-					if (false == oWriteElm.Parse(aLine, sr)) continue;
+                    if (oWriteElm == null) continue;
+                    if (false == oWriteElm.Parse(aLine, sr)) continue;
 
-					if (null != oWriteElm)
-					{
-						/// write a element
-						using (Transaction myT = database.TransactionManager.StartTransaction())
-						{
-							BlockTable bt = (BlockTable)myT.GetObject(database.BlockTableId, OpenMode.ForRead, false);
-							BlockTableRecord btr = (BlockTableRecord)myT.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false);
-							if (!(oWriteElm is LayerElm))
-							{
-								LayerTable acLyrTbl = (LayerTable)myT.GetObject(database.LayerTableId, OpenMode.ForRead);
-								if (!acLyrTbl.Has(oWriteElm.Layer) && !string.IsNullOrEmpty(oWriteElm.Layer))
-								{
-									LayerTableRecord acLyrTblRcd = new LayerTableRecord();
+                    if (null == oWriteElm) continue;
+                    /// write a element
+                    using (Transaction myT = database.TransactionManager.StartTransaction())
+                    {
+                        BlockTable bt = (BlockTable)myT.GetObject(database.BlockTableId, OpenMode.ForRead, false);
+                        BlockTableRecord btr = (BlockTableRecord)myT.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false);
+                        if (!(oWriteElm is LayerElm))
+                        {
+                            LayerTable acLyrTbl = (LayerTable)myT.GetObject(database.LayerTableId, OpenMode.ForRead);
+                            if (!acLyrTbl.Has(oWriteElm.Layer) && !string.IsNullOrEmpty(oWriteElm.Layer))
+                            {
+                                LayerTableRecord acLyrTblRcd = new LayerTableRecord();
 
-									/// ... and set its properties
-									acLyrTblRcd.Name = oWriteElm.Layer;
-									///ltr.Color = WriteElm.ParseColor();
+                                /// ... and set its properties
+                                acLyrTblRcd.Name = oWriteElm.Layer;
+                                ///ltr.Color = WriteElm.ParseColor();
 
-									/// Add the new layer to the layer table
-									acLyrTbl.UpgradeOpen();
-									ObjectId ltId = acLyrTbl.Add(acLyrTblRcd);
-									myT.AddNewlyCreatedDBObject(acLyrTblRcd, true);
+                                /// Add the new layer to the layer table
+                                acLyrTbl.UpgradeOpen();
+                                ObjectId ltId = acLyrTbl.Add(acLyrTblRcd);
+                                myT.AddNewlyCreatedDBObject(acLyrTblRcd, true);
 
-									/// Set the layer to be current for this drawing
-									database.Clayer = ltId;
-								}
-							}
+                                /// Set the layer to be current for this drawing
+                                database.Clayer = ltId;
+                            }
+                        }
 
-							oWriteElm.CreateEntity(bt, btr, myT);
-							myT.Commit();
-						}
-					}
-				}
-			}
-		}
+                        oWriteElm.CreateEntity(bt, btr, myT);
+                        myT.Commit();
+                    }
+                }
+            }
+        }
 
         [CommandMethod("sdwf")]
         static public void DoIt()
         {
-            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;            
+            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
 
             PromptStringOptions opts = new PromptStringOptions("\nEnter File Path:");
             PromptResult res = ed.GetString(opts);
@@ -219,7 +206,7 @@ namespace aDwgWriter
                 Vector3d NormalVec = x.CrossProduct(y);
 
                 Database db = Application.DocumentManager.MdiActiveDocument.Database;
-                
+
                 Autodesk.AutoCAD.DatabaseServices.TransactionManager tm = db.TransactionManager;
 
                 /// Append entity.
@@ -228,42 +215,42 @@ namespace aDwgWriter
                     while (!oSR.EndOfStream)
                     {
                         WriteElm oWriteElm = null;
-                       
+
                         string aLine = oSR.ReadLine();
                         oWriteElm = ElmFactory.CreateElm(aLine);
 
                         if (oWriteElm == null) continue;
                         if (false == oWriteElm.Parse(aLine, oSR)) continue;
-                        
-                        if(null != oWriteElm)
+
+                        if (null != oWriteElm)
                         {
                             /// write a element
                             using (Transaction myT = tm.StartTransaction())
                             {
-								BlockTable bt = (BlockTable)tm.GetObject(db.BlockTableId, OpenMode.ForRead, false);
-								BlockTableRecord btr = (BlockTableRecord)tm.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false);
-								if (!(oWriteElm is LayerElm))
-								{	
-									LayerTable lt = (LayerTable)myT.GetObject(db.LayerTableId, OpenMode.ForRead);
-									if (!lt.Has(oWriteElm.Layer) && !string.IsNullOrEmpty(oWriteElm.Layer))
-									{
-										LayerTableRecord ltr = new LayerTableRecord();
+                                BlockTable bt = (BlockTable)tm.GetObject(db.BlockTableId, OpenMode.ForRead, false);
+                                BlockTableRecord btr = (BlockTableRecord)tm.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false);
+                                if (!(oWriteElm is LayerElm))
+                                {
+                                    LayerTable lt = (LayerTable)myT.GetObject(db.LayerTableId, OpenMode.ForRead);
+                                    if (!lt.Has(oWriteElm.Layer) && !string.IsNullOrEmpty(oWriteElm.Layer))
+                                    {
+                                        LayerTableRecord ltr = new LayerTableRecord();
 
-										/// ... and set its properties
-										ltr.Name = oWriteElm.Layer;
-										///ltr.Color = WriteElm.ParseColor();
+                                        /// ... and set its properties
+                                        ltr.Name = oWriteElm.Layer;
+                                        ///ltr.Color = WriteElm.ParseColor();
 
-										/// Add the new layer to the layer table
-										lt.UpgradeOpen();
-										ObjectId ltId = lt.Add(ltr);
-										myT.AddNewlyCreatedDBObject(ltr, true);
+                                        /// Add the new layer to the layer table
+                                        lt.UpgradeOpen();
+                                        ObjectId ltId = lt.Add(ltr);
+                                        myT.AddNewlyCreatedDBObject(ltr, true);
 
-										/// Set the layer to be current for this drawing
-										db.Clayer = ltId;
-									}
-								}
+                                        /// Set the layer to be current for this drawing
+                                        db.Clayer = ltId;
+                                    }
+                                }
 
-								oWriteElm.CreateEntity(bt , btr, myT);
+                                oWriteElm.CreateEntity(bt, btr, myT);
                                 myT.Commit();
                             }
                         }
